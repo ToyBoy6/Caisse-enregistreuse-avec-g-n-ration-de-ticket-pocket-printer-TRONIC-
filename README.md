@@ -1,1 +1,1 @@
-# Caisse-enregistreuse-avec-g-n-ration-de-ticket-pocket-printer-TRONIC-
+# Caisse enregistreuse avec génération de ticket pocket printer TRONIC
