@@ -1,1 +1,3 @@
 # Caisse enregistreuse avec génération de ticket pocket printer TRONIC
+# Lien public :
+lien public à venir...
