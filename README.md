@@ -1,3 +1,3 @@
 # Caisse enregistreuse avec génération de ticket pocket printer TRONIC
 # Lien public :
-lien public à venir...
+https://toyboy6.github.io/Caisse-enregistreuse-avec-g-n-ration-de-ticket-pocket-printer-TRONIC-/
