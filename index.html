@@ -3,15 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Caisse Enregistreuse - TRONIC 5890</title>
+  <title>Caisse POS - TRONIC 5890</title>
   <style>
     :root {
       --bg: #121214;
       --card: #1e1e24;
       --accent: #2563eb;
-      --accent-hover: #1d4ed8;
       --green: #16a34a;
-      --green-hover: #15803d;
       --danger: #dc2626;
       --text: #f3f4f6;
       --border: #2e2e38;
@@ -20,450 +18,207 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
     body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* Header */
-    header { background: var(--card); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+    header { background: var(--card); padding: 12px 20px; border-bottom: 1px solid var(--border); }
     h1 { font-size: 1.2rem; color: #fff; }
-    .status-bar { display: flex; align-items: center; gap: 15px; }
-    .status-badge { font-size: 0.85rem; padding: 4px 10px; border-radius: 20px; background: #374151; }
-    .status-badge.connected { background: var(--green); }
 
-    /* Layout Principal */
     .pos-container { display: flex; flex: 1; overflow: hidden; }
 
-    /* Côté Gauche : Produits & Cathégories */
+    /* Catalogue Produits */
     .catalog-section { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-    
-    .categories { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
-    .cat-btn { padding: 8px 16px; background: var(--card); border: 1px solid var(--border); color: #fff; border-radius: 8px; cursor: pointer; white-space: nowrap; font-weight: 600; }
-    .cat-btn.active { background: var(--accent); border-color: var(--accent); }
+    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+    .product-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 8px; text-align: center; cursor: pointer; user-select: none; }
+    .product-card:active { transform: scale(0.96); background: var(--accent); }
+    .product-name { font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
+    .product-price { font-size: 0.8rem; color: #9ca3af; }
 
-    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
-    .product-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 15px 10px; text-align: center; cursor: pointer; transition: transform 0.1s, border-color 0.1s; user-select: none; }
-    .product-card:active { transform: scale(0.96); }
-    .product-card:hover { border-color: var(--accent); }
-    .product-name { font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; }
-    .product-price { font-size: 0.85rem; color: #9ca3af; }
-
-    /* Côté Droit : Panier & Paiement */
-    .cart-section { width: 380px; background: var(--card); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
-    
-    .cart-header { padding: 15px; border-bottom: 1px solid var(--border); font-size: 1.1rem; font-weight: bold; display: flex; justify-content: space-between; }
+    /* Panier */
+    .cart-section { width: 360px; background: var(--card); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+    .cart-header { padding: 12px; border-bottom: 1px solid var(--border); font-weight: bold; display: flex; justify-content: space-between; }
     .cart-items { flex: 1; overflow-y: auto; padding: 10px; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
     
-    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-    .cart-item-info { flex: 1; }
-    .cart-item-title { font-weight: 600; }
-    .cart-item-price { font-size: 0.8rem; color: #9ca3af; }
-    .cart-item-qty { display: flex; align-items: center; gap: 8px; margin-left: 10px; }
-    .qty-btn { width: 24px; height: 24px; border-radius: 4px; border: none; background: #374151; color: #fff; font-weight: bold; cursor: pointer; }
+    .cart-summary { padding: 15px; background: #16161a; border-top: 1px solid var(--border); }
+    .summary-total { font-size: 1.3rem; font-weight: bold; display: flex; justify-content: space-between; margin-top: 5px; color: #fff; }
 
-    .cart-summary { padding: 15px; border-top: 1px solid var(--border); background: #16161a; }
-    .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; }
-    .summary-total { font-size: 1.4rem; font-weight: bold; color: #fff; border-top: 1px dashed var(--border); padding-top: 8px; }
-
-    .pay-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; background: #16161a; border-top: 1px solid var(--border); }
-    
-    .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.95rem; text-align: center; }
-    .btn-accent { background: var(--accent); color: #fff; }
-    .btn-green { background: var(--green); color: #fff; grid-column: span 2; font-size: 1.1rem; }
-    .btn-danger { background: var(--danger); color: #fff; }
+    .pay-actions { padding: 15px; background: #16161a; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border); }
+    .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; color: #fff; text-align: center; }
+    .btn-green { background: var(--green); }
+    .btn-danger { background: var(--danger); padding: 4px 8px; font-size: 0.8rem; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* Modal Rendu Monnaie */
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 100; }
-    .modal.active { display: flex; }
-    .modal-content { background: var(--card); border: 1px solid var(--border); width: 340px; border-radius: 12px; padding: 20px; }
-    .modal-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; text-align: center; }
-    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-    .num-btn { padding: 15px; background: #2e2e38; border: none; border-radius: 8px; color: #fff; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
-    .num-btn:active { background: var(--accent); }
-
-    /* Style pré-rendu ticket caché */
-    #ticketPreview { display: none; width: 384px; background: #fff; color: #000; padding: 10px; font-family: monospace; font-size: 12px; }
+    /* Zone Ticket Caché / Canvas */
+    #ticketContainer { position: absolute; left: -9999px; width: 384px; background: #fff; color: #000; padding: 15px; font-family: monospace; }
   </style>
 </head>
 <body>
 
-  <!-- En-tête / Connexion Imprimante -->
   <header>
-    <h1>🛒 Caisse POS — TRONIC 5890</h1>
-    <div class="status-bar">
-      <span id="btStatus" class="status-badge">Non connecté</span>
-      <button id="btnConnect" class="btn btn-accent" onclick="connectPrinter()">📡 Connecter Imprimante</button>
-    </div>
+    <h1>🛒 Caisse Enregistreuse — TRONIC 5890</h1>
   </header>
 
-  <!-- Contenu Principal -->
   <div class="pos-container">
-    
-    <!-- Section Catalogue / Produits -->
+    <!-- Catalogue -->
     <div class="catalog-section">
-      <div class="categories" id="categoriesBar">
-        <button class="cat-btn active" onclick="filterCategory('all', this)">Tous</button>
-        <button class="cat-btn" onclick="filterCategory('Boissons', this)">🥤 Boissons</button>
-        <button class="cat-btn" onclick="filterCategory('Boulangerie', this)">🥐 Boulangerie</button>
-        <button class="cat-btn" onclick="filterCategory('Snacks', this)">🥪 Snacks</button>
-      </div>
-
       <div class="products-grid" id="productsGrid"></div>
     </div>
 
-    <!-- Section Panier / Ticket -->
+    <!-- Panier -->
     <div class="cart-section">
       <div class="cart-header">
         <span>Ticket en cours</span>
-        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.8rem;" onclick="clearCart()">Vider</button>
+        <button class="btn btn-danger" onclick="clearCart()">Vider</button>
       </div>
 
       <div class="cart-items" id="cartItems"></div>
 
       <div class="cart-summary">
-        <div class="summary-row">
-          <span>Articles :</span>
-          <span id="summaryCount">0</span>
-        </div>
-        <div class="summary-row summary-total">
+        <div class="summary-total">
           <span>TOTAL :</span>
           <span id="summaryTotal">0.00 €</span>
         </div>
       </div>
 
       <div class="pay-actions">
-        <button class="btn btn-accent" onclick="openPayment('CB')">💳 Carte</button>
-        <button class="btn btn-accent" onclick="openPayment('ESP')">💵 Espèces</button>
-        <button id="btnPrint" class="btn btn-green" onclick="processSale()" disabled>ENREGISTRER & IMPRIMER</button>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Modal Rendu Monnaie pour Espèces -->
-  <div class="modal" id="payModal">
-    <div class="modal-content">
-      <div class="modal-title">Paiement Espèces</div>
-      <div class="summary-row"><span>Total à payer :</span><b id="modalTotal">0.00 €</b></div>
-      <div class="summary-row"><span>Reçu :</span><b id="modalGiven" style="color:var(--accent)">0.00 €</b></div>
-      <div class="summary-row" style="font-size:1.1rem; margin-top:5px;"><span>Rendu :</span><b id="modalChange" style="color:var(--green)">0.00 €</b></div>
-
-      <div class="numpad">
-        <button class="num-btn" onclick="numKey('1')">1</button>
-        <button class="num-btn" onclick="numKey('2')">2</button>
-        <button class="num-btn" onclick="numKey('3')">3</button>
-        <button class="num-btn" onclick="numKey('4')">4</button>
-        <button class="num-btn" onclick="numKey('5')">5</button>
-        <button class="num-btn" onclick="numKey('6')">6</button>
-        <button class="num-btn" onclick="numKey('7')">7</button>
-        <button class="num-btn" onclick="numKey('8')">8</button>
-        <button class="num-btn" onclick="numKey('9')">9</button>
-        <button class="num-btn" onclick="numKey('C')">C</button>
-        <button class="num-btn" onclick="numKey('0')">0</button>
-        <button class="num-btn" onclick="numKey('.')">.</button>
-      </div>
-
-      <div style="display:flex; gap:10px; margin-top:15px;">
-        <button class="btn btn-danger" style="flex:1" onclick="closeModal()">Annuler</button>
-        <button class="btn btn-green" style="flex:1" onclick="validateCashPayment()">Valider</button>
+        <button id="btnGenerate" class="btn btn-green" onclick="generateTicketImage()" disabled>
+          📸 Générer le Ticket (Image pour LuckPrinter)
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Conteneur invisible pour génération du Bitmap du ticket -->
-  <div id="ticketPreview"></div>
+  <!-- Structure du ticket généré en HTML -->
+  <div id="ticketContainer">
+    <div style="text-align:center; font-weight:bold; font-size:16px;">MON COMMERCE</div>
+    <div style="text-align:center; font-size:11px;">Ticket de Caisse</div>
+    <div style="border-bottom:1px dashed #000; margin:8px 0;"></div>
+    <div id="tDate" style="font-size:10px;"></div>
+    <div style="border-bottom:1px dashed #000; margin:8px 0;"></div>
+    <div id="tItems"></div>
+    <div style="border-bottom:1px dashed #000; margin:8px 0;"></div>
+    <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:bold;">
+      <span>TOTAL :</span>
+      <span id="tTotal">0.00 €</span>
+    </div>
+    <div style="border-bottom:1px dashed #000; margin:8px 0;"></div>
+    <div style="text-align:center; font-size:11px; margin-top:10px;">Merci de votre visite !</div>
+  </div>
+
   <canvas id="renderCanvas" style="display:none;"></canvas>
 
   <script>
-    // --- DONNÉES PRODUITS DE DÉMO ---
     const products = [
-      { id: 1, name: "Baguette", price: 1.10, cat: "Boulangerie" },
-      { id: 2, name: "Croissant", price: 1.20, cat: "Boulangerie" },
-      { id: 3, name: "Pain au Choc.", price: 1.30, cat: "Boulangerie" },
-      { id: 4, name: "Café Espresso", price: 1.80, cat: "Boissons" },
-      { id: 5, name: "Eau 50cl", price: 1.50, cat: "Boissons" },
-      { id: 6, name: "Soda 33cl", price: 2.50, cat: "Boissons" },
-      { id: 7, name: "Sandwich Jambon", price: 4.50, cat: "Snacks" },
-      { id: 8, name: "Panini Poulet", price: 5.20, cat: "Snacks" },
-      { id: 9, name: "Chips 45g", price: 1.60, cat: "Snacks" },
+      { id: 1, name: "Baguette", price: 1.10 },
+      { id: 2, name: "Croissant", price: 1.20 },
+      { id: 3, name: "Café Espresso", price: 1.80 },
+      { id: 4, name: "Eau 50cl", price: 1.50 },
+      { id: 5, name: "Sandwich", price: 4.50 },
+      { id: 6, name: "Soda", price: 2.50 }
     ];
 
     let cart = [];
-    let currentPayMode = 'CB';
-    let cashGivenStr = '0';
-    let gattCharacteristic = null;
 
-    // --- INITIALISATION CAISSE ---
-    function renderProducts(catFilter = 'all') {
+    function renderProducts() {
       const grid = document.getElementById('productsGrid');
       grid.innerHTML = '';
       products.forEach(p => {
-        if (catFilter === 'all' || p.cat === catFilter) {
-          grid.innerHTML += `
-            <div class="product-card" onclick="addToCart(${p.id})">
-              <div class="product-name">${p.name}</div>
-              <div class="product-price">${p.price.toFixed(2)} €</div>
-            </div>
-          `;
-        }
+        grid.innerHTML += `
+          <div class="product-card" onclick="addToCart(${p.id})">
+            <div class="product-name">${p.name}</div>
+            <div class="product-price">${p.price.toFixed(2)} €</div>
+          </div>
+        `;
       });
     }
 
-    function filterCategory(cat, btn) {
-      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderProducts(cat);
-    }
-
-    function addToCart(productId) {
-      const product = products.find(p => p.id === productId);
-      const existing = cart.find(item => item.id === productId);
-      if (existing) {
-        existing.qty++;
-      } else {
-        cart.push({ ...product, qty: 1 });
-      }
-      updateCartUI();
-    }
-
-    function updateQty(productId, delta) {
-      const item = cart.find(i => i.id === productId);
-      if (item) {
-        item.qty += delta;
-        if (item.qty <= 0) cart = cart.filter(i => i.id !== productId);
-      }
-      updateCartUI();
+    function addToCart(id) {
+      const p = products.find(i => i.id === id);
+      const item = cart.find(i => i.id === id);
+      if (item) item.qty++;
+      else cart.push({ ...p, qty: 1 });
+      updateCart();
     }
 
     function clearCart() {
       cart = [];
-      updateCartUI();
+      updateCart();
     }
 
-    function updateCartUI() {
+    function updateCart() {
       const container = document.getElementById('cartItems');
       container.innerHTML = '';
       let total = 0;
-      let count = 0;
 
       cart.forEach(item => {
-        const itemTotal = item.qty * item.price;
-        total += itemTotal;
-        count += item.qty;
+        const lineTotal = item.qty * item.price;
+        total += lineTotal;
         container.innerHTML += `
           <div class="cart-item">
-            <div class="cart-item-info">
-              <div class="cart-item-title">${item.name}</div>
-              <div class="cart-item-price">${item.qty} x ${item.price.toFixed(2)} € = ${itemTotal.toFixed(2)} €</div>
-            </div>
-            <div class="cart-item-qty">
-              <button class="qty-btn" onclick="updateQty(${item.id}, -1)">-</button>
-              <b>${item.qty}</b>
-              <button class="qty-btn" onclick="updateQty(${item.id}, 1)">+</button>
-            </div>
+            <div><b>${item.name}</b> (${item.qty}x)</div>
+            <div>${lineTotal.toFixed(2)} €</div>
           </div>
         `;
       });
 
-      document.getElementById('summaryCount').innerText = count;
       document.getElementById('summaryTotal').innerText = `${total.toFixed(2)} €`;
-      document.getElementById('btnPrint').disabled = cart.length === 0;
+      document.getElementById('btnGenerate').disabled = cart.length === 0;
     }
 
-    // --- GESTION DES PAIEMENTS ---
-    function openPayment(mode) {
-      if (cart.length === 0) return;
-      currentPayMode = mode;
-      const total = cart.reduce((sum, i) => sum + (i.qty * i.price), 0);
-
-      if (mode === 'ESP') {
-        cashGivenStr = '0';
-        document.getElementById('modalTotal').innerText = `${total.toFixed(2)} €`;
-        updateModalNumpad(total);
-        document.getElementById('payModal').classList.add('active');
-      } else {
-        processSale();
-      }
-    }
-
-    function closeModal() {
-      document.getElementById('payModal').classList.remove('active');
-    }
-
-    function numKey(key) {
-      if (key === 'C') cashGivenStr = '0';
-      else if (key === '.') { if (!cashGivenStr.includes('.')) cashGivenStr += '.'; }
-      else { cashGivenStr = cashGivenStr === '0' ? key : cashGivenStr + key; }
-      
-      const total = cart.reduce((sum, i) => sum + (i.qty * i.price), 0);
-      updateModalNumpad(total);
-    }
-
-    function updateModalNumpad(total) {
-      const val = parseFloat(cashGivenStr) || 0;
-      document.getElementById('modalGiven').innerText = `${val.toFixed(2)} €`;
-      const change = val - total;
-      document.getElementById('modalChange').innerText = `${(change > 0 ? change : 0).toFixed(2)} €`;
-    }
-
-    function validateCashPayment() {
-      const total = cart.reduce((sum, i) => sum + (i.qty * i.price), 0);
-      const val = parseFloat(cashGivenStr) || 0;
-      if (val < total) { alert("Le montant donné est insuffisant !"); return; }
-      closeModal();
-      processSale();
-    }
-
-    // --- MODULE IMPRESSION BLUETOOTH BLE (TRONIC 5890) ---
-    async function connectPrinter() {
-      const statusSpan = document.getElementById('btStatus');
-      if (!navigator.bluetooth) {
-        alert("Web Bluetooth n'est pas supporté par ce navigateur (Utilisez Chrome ou Edge).");
-        return;
-      }
-      try {
-        statusSpan.innerText = "Recherche...";
-        const device = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
-          optionalServices: [
-            '000018f0-0000-1000-8000-00805f9b34fb',
-            '0000ffe0-0000-1000-8000-00805f9b34fb',
-            '0000af00-0000-1000-8000-00805f9b34fb'
-          ]
-        });
-
-        statusSpan.innerText = "Connexion...";
-        const server = await device.gatt.connect();
-        const services = await server.getPrimaryServices();
-
-        for (const service of services) {
-          const chars = await service.getCharacteristics();
-          for (const c of chars) {
-            if (c.properties.write || c.properties.writeWithoutResponse) {
-              gattCharacteristic = c;
-              break;
-            }
-          }
-          if (gattCharacteristic) break;
-        }
-
-        if (gattCharacteristic) {
-          statusSpan.innerText = "Connecté";
-          statusSpan.classList.add('connected');
-        } else {
-          throw new Error("Caractéristique d'écriture introuvable");
-        }
-      } catch (err) {
-        statusSpan.innerText = "Erreur Connexion";
-        alert("Erreur de connexion Bluetooth : " + err.message);
-      }
-    }
-
-    async function processSale() {
-      if (gattCharacteristic) {
-        await printReceiptBLE();
-      } else {
-        alert("Vente validée ! (Imprimante non connectée en Bluetooth).");
-      }
-      clearCart();
-    }
-
-    async function printReceiptBLE() {
-      const total = cart.reduce((sum, i) => sum + (i.qty * i.price), 0);
+    function generateTicketImage() {
       const now = new Date();
-
-      // Génération HTML du ticket pour le Canvas
-      let ticketHtml = `
-        <div style="text-align:center; font-weight:bold; font-size:16px;">MON COMMERCE</div>
-        <div style="text-align:center; font-size:11px;">12 Rue du Commerce, Paris</div>
-        <div style="text-align:center; font-size:11px;">Tél: 01 23 45 67 89</div>
-        <div style="border-bottom:1px dashed #000; margin:5px 0;"></div>
-        <div style="font-size:10px;">Date: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}</div>
-        <div style="font-size:10px;">Paiement: ${currentPayMode === 'CB' ? 'Carte Bancaire' : 'Espèces'}</div>
-        <div style="border-bottom:1px dashed #000; margin:5px 0;"></div>
-      `;
+      document.getElementById('tDate').innerText = `Date : ${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR')}`;
+      
+      const tItems = document.getElementById('tItems');
+      tItems.innerHTML = '';
+      let total = 0;
 
       cart.forEach(item => {
-        ticketHtml += `
-          <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold;">
-            <span>${item.name}</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; font-size:11px;">
-            <span>${item.qty} x ${item.price.toFixed(2)}€</span>
-            <span>${(item.qty * item.price).toFixed(2)}€</span>
+        const lineTotal = item.qty * item.price;
+        total += lineTotal;
+        tItems.innerHTML += `
+          <div style="display:flex; justify-content:space-between; font-size:12px;">
+            <span>${item.name} x${item.qty}</span>
+            <span>${lineTotal.toFixed(2)} €</span>
           </div>
         `;
       });
 
-      ticketHtml += `
-        <div style="border-bottom:1px dashed #000; margin:5px 0;"></div>
-        <div style="display:flex; justify-content:space-between; font-size:15px; font-weight:bold;">
-          <span>TOTAL :</span>
-          <span>${total.toFixed(2)} €</span>
-        </div>
-        <div style="border-bottom:1px dashed #000; margin:5px 0;"></div>
-        <div style="text-align:center; font-size:11px; margin-top:8px;">Merci de votre visite !</div>
-      `;
+      document.getElementById('tTotal').innerText = `${total.toFixed(2)} €`;
 
-      const tPreview = document.getElementById('ticketPreview');
-      tPreview.style.display = 'block';
-      tPreview.innerHTML = ticketHtml;
-
-      // Construction Bitmap 384px (Largeur thermique 58mm)
+      // Conversion du HTML en Image PNG (Largeur 384px exacte pour TRONIC 5890)
+      const ticketEl = document.getElementById('ticketContainer');
       const canvas = document.getElementById('renderCanvas');
       const ctx = canvas.getContext('2d');
+
       const width = 384;
-      const height = tPreview.offsetHeight;
+      const height = ticketEl.offsetHeight;
       canvas.width = width;
       canvas.height = height;
 
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, width, height);
 
-      // Dessin simplifié des lignes de texte sur canvas
+      // Rendu du texte sur le Canvas
       ctx.fillStyle = '#000000';
-      ctx.font = '16px monospace';
-      const lines = tPreview.innerText.split('\n');
+      ctx.font = '14px monospace';
+      
+      const lines = ticketEl.innerText.split('\n');
       let y = 20;
       lines.forEach(l => {
-        if(l.trim() !== '') {
-          ctx.fillText(l.substring(0, 32), 10, y);
-          y += 20;
+        if (l.trim() !== '') {
+          ctx.fillText(l, 10, y);
+          y += 18;
         }
       });
 
-      tPreview.style.display = 'none';
+      // Téléchargement automatique du PNG
+      const link = document.createElement('a');
+      link.download = `ticket-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
 
-      // Trame ESC/POS Raster
-      const imgData = ctx.getImageData(0, 0, width, height);
-      const bytesPerLine = width / 8;
-      const commands = [0x1B, 0x40, 0x1D, 0x76, 0x30, 0, bytesPerLine, 0, height & 0xFF, (height >> 8) & 0xFF];
-
-      for (let l = 0; l < height; l++) {
-        for (let b = 0; b < bytesPerLine; b++) {
-          let byteVal = 0;
-          for (let bit = 0; bit < 8; bit++) {
-            const idx = (l * width + (b * 8 + bit)) * 4;
-            const avg = (imgData.data[idx] + imgData.data[idx+1] + imgData.data[idx+2]) / 3;
-            if (avg < 128) byteVal |= (1 << (7 - bit));
-          }
-          commands.push(byteVal);
-        }
-      }
-      commands.push(0x1B, 0x64, 0x04); // Cut / Feed
-
-      // Envoi des octets BLE par paquets
-      const data = new Uint8Array(commands);
-      const chunkSize = 128;
-      for (let i = 0; i < data.length; i += chunkSize) {
-        const chunk = data.slice(i, i + chunkSize);
-        if (gattCharacteristic.properties.writeWithoutResponse) {
-          await gattCharacteristic.writeValueWithoutResponse(chunk);
-        } else {
-          await gattCharacteristic.writeValue(chunk);
-        }
-        await new Promise(r => setTimeout(r, 20));
-      }
+      clearCart();
     }
 
-    // Initialisation
     renderProducts();
   </script>
 </body>
