@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Générateur de Tickets - TRONIC 5890</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --card: #2b2b3b;
+      --text: #cdd6f4;
+      --accent: #89b4fa;
+      --accent-hover: #74c7ec;
+      --danger: #f38ba8;
+      --border: #45475a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 20px; display: flex; gap: 20px; min-height: 100vh; }
+    
+    .panel { background: var(--card); border-radius: 12px; padding: 20px; flex: 1; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid var(--border); }
+    .panel-preview { flex: 0 0 420px; display: flex; flex-direction: column; align-items: center; }
+
+    h2 { margin-bottom: 15px; color: var(--accent); font-size: 1.2rem; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+    
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 0.85rem; margin-bottom: 4px; color: #a6adc8; }
+    input { width: 100%; padding: 8px 12px; background: #181825; border: 1px solid var(--border); border-radius: 6px; color: #fff; font-size: 0.9rem; }
+    input:focus { outline: none; border-color: var(--accent); }
+
+    .items-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; }
+    .items-table th, .items-table td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border); }
+    .items-table th { font-size: 0.8rem; color: #a6adc8; }
+    .items-table input { padding: 4px 8px; }
+
+    .btn { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; }
+    .btn-primary { background: var(--accent); color: #11111b; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-danger { background: var(--danger); color: #11111b; padding: 4px 8px; font-size: 0.8rem; }
+    .btn-add { background: #a6e3a1; color: #11111b; margin-top: 5px; }
+
+    .controls { display: flex; gap: 10px; margin-top: 15px; width: 100%; }
+
+    /* Prévisualisation thermique */
+    .receipt-container { background: #fff; color: #000; width: 384px; padding: 15px; border-radius: 4px; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-family: 'Courier New', Courier, monospace; }
+    .receipt-header { text-align: center; margin-bottom: 10px; }
+    .receipt-title { font-weight: bold; font-size: 1.1rem; text-transform: uppercase; }
+    .receipt-info { font-size: 0.8rem; line-height: 1.2; }
+    .receipt-divider { border-top: 1px dashed #000; margin: 8px 0; }
+    
+    .receipt-row { display: flex; justify-content: space-between; font-size: 0.85rem; margin: 3px 0; }
+    .receipt-item-title { font-weight: bold; }
+    .receipt-total { font-weight: bold; font-size: 1rem; }
+
+    .receipt-qr { text-align: center; margin-top: 10px; }
+    .receipt-qr img { width: 100px; height: 100px; }
+
+    /* Impression classique */
+    @media print {
+      body * { visibility: hidden; }
+      .receipt-container, .receipt-container * { visibility: visible; }
+      .receipt-container { position: absolute; left: 0; top: 0; width: 58mm; padding: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Formulaire de Saisie -->
+  <div class="panel">
+    <h2>Configuration de la Boutique</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div class="form-group"><label>Nom de l'Enseigne</label><input type="text" id="shopName" value="SUPERETTE EXPRESS" oninput="updateReceipt()"></div>
+      <div class="form-group"><label>Adresse</label><input type="text" id="shopAddr" value="12 Rue de la Paix" oninput="updateReceipt()"></div>
+      <div class="form-group"><label>Téléphone</label><input type="text" id="shopPhone" value="01 23 45 67 89" oninput="updateReceipt()"></div>
+      <div class="form-group"><label>SIRET / TVA</label><input type="text" id="shopSiret" value="SIRET: 123 456 789 00012" oninput="updateReceipt()"></div>
+    </div>
+
+    <h2 style="margin-top: 20px;">Articles</h2>
+    <table class="items-table">
+      <thead>
+        <tr><th>Désignation</th><th style="width: 70px;">Qté</th><th style="width: 80px;">P.U (€)</th><th style="width: 30px;"></th></tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
+    <button class="btn btn-add" onclick="addItem()">+ Ajouter un article</button>
+
+    <h2 style="margin-top: 20px;">Pied de Ticket & QR Code</h2>
+    <div class="form-group"><label>Message de fin</label><input type="text" id="footerMsg" value="Merci de votre visite !" oninput="updateReceipt()"></div>
+    <div class="form-group"><label>Contenu du QR Code (ex: lien web, ID facture)</label><input type="text" id="qrData" value="FACTURE-2026-0042" oninput="updateReceipt()"></div>
+  </div>
+
+  <!-- Aperçu et Boutons d'Action -->
+  <div class="panel panel-preview">
+    <h2>Aperçu Ticket (Largeur 384px / 58mm)</h2>
+    
+    <div class="receipt-container" id="receipt">
+      <div class="receipt-header">
+        <div class="receipt-title" id="rName">SUPERETTE EXPRESS</div>
+        <div class="receipt-info" id="rAddr">12 Rue de la Paix</div>
+        <div class="receipt-info" id="rPhone">01 23 45 67 89</div>
+        <div class="receipt-info" id="rSiret">SIRET: 123 456 789 00012</div>
+      </div>
+      <div class="receipt-divider"></div>
+      <div class="receipt-info" id="rDate"></div>
+      <div class="receipt-divider"></div>
+      
+      <div id="rItems"></div>
+      
+      <div class="receipt-divider"></div>
+      <div class="receipt-row receipt-total">
+        <span>TOTAL :</span>
+        <span id="rTotal">0.00 €</span>
+      </div>
+      <div class="receipt-divider"></div>
+      
+      <div class="receipt-header" style="margin-top: 10px;">
+        <div class="receipt-info" id="rFooter">Merci de votre visite !</div>
+        <div class="receipt-qr" id="rQr"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn btn-primary" style="flex: 1; background: #fab387;" onclick="printBluetooth()">
+        📡 Imprimer via Bluetooth (TRONIC 5890)
+      </button>
+      <button class="btn btn-primary" onclick="window.print()">
+        🖨️ Système
+      </button>
+    </div>
+    <p id="btStatus" style="font-size: 0.8rem; margin-top: 10px; color: #a6adc8;"></p>
+  </div>
+
+  <canvas id="renderCanvas" style="display:none;"></canvas>
+
+  <script>
+    let items = [
+      { name: "Pain Baguette", qty: 2, price: 1.10 },
+      { name: "Café Espresso", qty: 1, price: 2.50 },
+      { name: "Jus d'Orange 1L", qty: 1, price: 3.20 }
+    ];
+
+    function renderItemsTable() {
+      const tbody = document.getElementById('itemsBody');
+      tbody.innerHTML = '';
+      items.forEach((item, index) => {
+        tbody.innerHTML += `
+          <tr>
+            <td><input type="text" value="${item.name}" oninput="items[${index}].name = this.value; updateReceipt();"></td>
+            <td><input type="number" value="${item.qty}" min="1" oninput="items[${index}].qty = parseFloat(this.value)||1; updateReceipt();"></td>
+            <td><input type="number" step="0.01" value="${item.price.toFixed(2)}" oninput="items[${index}].price = parseFloat(this.value)||0; updateReceipt();"></td>
+            <td><button class="btn btn-danger" onclick="removeItem(${index})">X</button></td>
+          </tr>
+        `;
+      });
+    }
+
+    function addItem() {
+      items.push({ name: "Article", qty: 1, price: 1.00 });
+      renderItemsTable();
+      updateReceipt();
+    }
+
+    function removeItem(index) {
+      items.splice(index, 1);
+      renderItemsTable();
+      updateReceipt();
+    }
+
+    function updateReceipt() {
+      document.getElementById('rName').innerText = document.getElementById('shopName').value;
+      document.getElementById('rAddr').innerText = document.getElementById('shopAddr').value;
+      document.getElementById('rPhone').innerText = document.getElementById('shopPhone').value;
+      document.getElementById('rSiret').innerText = document.getElementById('shopSiret').value;
+      document.getElementById('rFooter').innerText = document.getElementById('footerMsg').value;
+
+      const now = new Date();
+      document.getElementById('rDate').innerText = `Date: ${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR')}`;
+
+      const rItems = document.getElementById('rItems');
+      rItems.innerHTML = '';
+      let total = 0;
+
+      items.forEach(item => {
+        const lineTotal = item.qty * item.price;
+        total += lineTotal;
+        rItems.innerHTML += `
+          <div class="receipt-item-title">${item.name}</div>
+          <div class="receipt-row">
+            <span>${item.qty} x ${item.price.toFixed(2)} €</span>
+            <span>${lineTotal.toFixed(2)} €</span>
+          </div>
+        `;
+      });
+
+      document.getElementById('rTotal').innerText = `${total.toFixed(2)} €`;
+
+      // QR Code
+      const qrData = document.getElementById('qrData').value;
+      const qrContainer = document.getElementById('rQr');
+      qrContainer.innerHTML = '';
+      if (qrData.trim() !== '') {
+        const typeNumber = 0;
+        const errorCorrectionLevel = 'L';
+        const qr = qrcode(typeNumber, errorCorrectionLevel);
+        qr.addData(qrData);
+        qr.make();
+        qrContainer.innerHTML = qr.createImgTag(3);
+      }
+    }
+
+    // Initialisation
+    renderItemsTable();
+    updateReceipt();
+
+    // -------------------------------------------------------------
+    // MODULE BLE TRONIC 5890 / LUCKPRINTER (384px Raster Bit Image)
+    // -------------------------------------------------------------
+    async function printBluetooth() {
+      const status = document.getElementById('btStatus');
+      
+      if (!navigator.bluetooth) {
+        alert("L'API Web Bluetooth n'est pas supportée par votre navigateur. Utilisez Google Chrome, MS Edge ou Brave.");
+        return;
+      }
+
+      try {
+        status.innerText = "Recherche de la TRONIC 5890...";
+        
+        const device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [
+            '000018f0-0000-1000-8000-00805f9b34fb', // Service générique mini-imprimantes BLE
+            '0000af00-0000-1000-8000-00805f9b34fb', 
+            '0000ffe0-0000-1000-8000-00805f9b34fb'
+          ]
+        });
+
+        status.innerText = "Connexion à " + device.name + "...";
+        const server = await device.gatt.connect();
+
+        // Recherche du service et de la caractéristique d'écriture
+        let writeChar = null;
+        const services = await server.getPrimaryServices();
+
+        for (const service of services) {
+          const characteristics = await service.getCharacteristics();
+          for (const char of characteristics) {
+            if (char.properties.write || char.properties.writeWithoutResponse) {
+              writeChar = char;
+              break;
+            }
+          }
+          if (writeChar) break;
+        }
+
+        if (!writeChar) {
+          throw new Error("Impossible de trouver le canal d'écriture sur l'imprimante.");
+        }
+
+        status.innerText = "Génération de l'image bitmap...";
+        const imageData = await generateBitmapData();
+
+        status.innerText = "Impression en cours...";
+        
+        // Envoi par paquets de 128 octets pour éviter de saturer le buffer BLE
+        const chunkSize = 128;
+        for (let i = 0; i < imageData.length; i += chunkSize) {
+          const chunk = imageData.slice(i, i + chunkSize);
+          if (writeChar.properties.writeWithoutResponse) {
+            await writeChar.writeValueWithoutResponse(chunk);
+          } else {
+            await writeChar.writeValue(chunk);
+          }
+          await new Promise(r => setTimeout(r, 20)); // Petit délai anti-overflow
+        }
+
+        status.innerText = "Impression terminée !";
+      } catch (err) {
+        console.error(err);
+        status.innerText = "Erreur : " + err.message;
+      }
+    }
+
+    // Convertit le DOM HTML du ticket en trame Binaire pour tête d'impression 384px (Floyd-Steinberg Dithering)
+    async function generateBitmapData() {
+      const receiptEl = document.getElementById('receipt');
+      
+      // Utilisation d'un canvas pour le rendu graphique haute précision
+      const canvas = document.getElementById('renderCanvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Largeur exacte des têtes d'impression thermiques 58mm
+      const PRINTER_WIDTH = 384; 
+      
+      // Conversion DOM vers Canvas
+      const width = PRINTER_WIDTH;
+      const height = Math.ceil(receiptEl.offsetHeight * (PRINTER_WIDTH / receiptEl.offsetWidth));
+      
+      canvas.width = width;
+      canvas.height = height;
+
+      // Fond blanc
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      // Tracé texte et rendu propre
+      ctx.fillStyle = '#000000';
+      ctx.font = '16px monospace';
+      
+      // Simulation visuelle du ticket
+      const lines = receiptEl.innerText.split('\n');
+      let y = 20;
+      lines.forEach(line => {
+        if (line.trim() !== '') {
+          ctx.fillText(line.substring(0, 32), 10, y);
+          y += 20;
+        }
+      });
+
+      const imgData = ctx.getImageData(0, 0, width, height);
+      const data = imgData.data;
+
+      // Construction des commandes thermiques ESC/POS Raster (GS v 0)
+      const bytesPerLine = width / 8; // 48 octets par ligne
+      const commands = [];
+
+      // Initialisation imprimante
+      commands.push(0x1B, 0x40);
+
+      // Commande d'impression image
+      commands.push(0x1D, 0x76, 0x30, 0, bytesPerLine, 0, height & 0xFF, (height >> 8) & 0xFF);
+
+      for (let l = 0; l < height; l++) {
+        for (let b = 0; b < bytesPerLine; b++) {
+          let byteVal = 0;
+          for (let bit = 0; bit < 8; bit++) {
+            const x = b * 8 + bit;
+            const idx = (l * width + x) * 4;
+            const avg = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+            if (avg < 128) { // Pixel noir
+              byteVal |= (1 << (7 - bit));
+            }
+          }
+          commands.push(byteVal);
+        }
+      }
+
+      // Avancement papier (Feed)
+      commands.push(0x1B, 0x64, 0x04);
+
+      return new Uint8Array(commands);
+    }
+  </script>
+</body>
+</html>
